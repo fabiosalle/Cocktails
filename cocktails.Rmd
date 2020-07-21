@@ -1,0 +1,94 @@
+---
+title: "Cocktails-Tidytuesday"
+author: "Fabio"
+date: "19/07/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r pressure, echo=FALSE}
+devtools::install_github("thebioengineer/tidytuesdayR")
+require(devtools)
+
+# Removing packates
+# ip <- as.data.frame(installed.packages())
+# head(ip)
+# ip <- subset(ip, !grepl("MRO", ip$LibPath))
+# ip <- ip[!(ip[,"Priority"] %in% c("base", "recommended")),]
+# path.lib <- unique(ip$LibPath)
+# path.lib 
+# pkgs.to.remove <- ip[,1]
+# head(pkgs.to.remove)
+# sapply(pkgs.to.remove, remove.packages, lib = path.lib)
+
+
+library(tidytuesdayR)
+library(tidyverse)
+theme_set(theme_light())
+
+#get the data here
+tuesdata <- tidytuesdayR::tt_load('2020-05-26')
+tuesdata <- tidytuesdayR::tt_load(2020, week = 22)
+tuesdata
+View(tuesdata)
+```
+
+
+```{r}
+mr_boston <- tuesdata$boston_cocktails
+View(mr_boston)
+nrow(mr_boston)
+
+mr_boston %>% 
+  count(name,sort=TRUE)
+
+mr_boston %>% 
+  count(category,sort=TRUE)
+
+mr_boston %>% 
+  count(ingredient,sort=TRUE)
+
+```
+
+```{r}
+
+mr_boston %>% 
+  count(ingredient,sort=TRUE) %>% 
+  head(20) %>% 
+  mutate(ingredient = fct_reorder(ingredient,n)) %>% 
+  ggplot(aes(n,ingredient)) +
+  geom_col() +
+  labs(title="Most common ingredients")
+
+mr_boston %>% 
+  distinct (name,category) %>% 
+  count (category, sort=TRUE)
+  
+
+
+```
+
+```{r}
+?fct_lump
+
+names(mr_boston)
+
+mr_boston %>% 
+  count(category,ingredient,sort=TRUE) %>% 
+  mutate(category = fct_lump(category, 6),
+         ingredient = fct_lump(ingredient,20)) %>% 
+  filter (ingredient != "Other") %>% 
+  mutate (ingredient = fct_reorder(ingredient,n,sum)) %>% 
+  ggplot(aes(n,ingredient,fill=category)) +
+  geom_col() +
+  labs(title="Most common ingredients",
+       x = "#of recipes",
+       y = "Ingredients",
+       fill = "Category")
+
+```
+
