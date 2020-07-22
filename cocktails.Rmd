@@ -28,6 +28,7 @@ require(devtools)
 
 library(tidytuesdayR)
 library(tidyverse)
+library(scales)
 theme_set(theme_light())
 
 #get the data here
@@ -75,8 +76,6 @@ mr_boston %>%
 ```{r}
 ?fct_lump
 
-names(mr_boston)
-
 mr_boston %>% 
   count(category,ingredient,sort=TRUE) %>% 
   mutate(category = fct_lump(category, 6),
@@ -86,9 +85,120 @@ mr_boston %>%
   ggplot(aes(n,ingredient,fill=category)) +
   geom_col() +
   labs(title="Most common ingredients",
-       x = "#of recipes",
+       x = "# of recipes",
        y = "Ingredients",
        fill = "Category")
 
+```
+
+```{r}
+
+n_recipes <- n_distinct(mr_boston$name)
+
+mr_boston %>% 
+  count(category,ingredient,sort=TRUE) %>% 
+  mutate(category = fct_lump(category, 6),
+         ingredient = fct_lump(ingredient,20)) %>% 
+  filter (ingredient != "Other") %>% 
+  mutate (ingredient = fct_reorder(ingredient,n,sum)) %>% 
+  ggplot(aes(n/n_recipes,ingredient,fill=category)) +
+  geom_col() +
+  scale_x_continuous(labels = percent_format()) +
+  labs(title="Most common ingredients",
+       x = "% of all recipes",
+       y = "Ingredients",
+       fill = "Category")
+
+
+
+```
+
+What ingredients tend to appear together?
+
+```{r}
+library(widyr)
+
+ingredient_paris <- mr_boston %>% 
+  add_count(ingredient) %>% 
+  filter (n >=5) %>% 
+  pairwise_cor(ingredient,name,sort=TRUE)
+
+
+ingredient_paris %>% 
+  filter (item1 =="Grenadine")
+
+ingredient_paris %>% 
+  filter (item1 =="Light Rum")
+
+
+ingredient_paris %>% 
+  filter (item1 =="Gin") %>% 
+  head(10) %>% 
+  mutate(item2= fct_reorder(item2,correlation)) %>% 
+  ggplot(aes(correlation,item2)) +
+  geom_col() +
+  labs(title ="What ingredients are more correlated with gin?")
+
+```
+
+```{r}
+
+ingredient_paris %>% 
+  filter (item1 %in% c("Gin","Tequila")) %>% 
+  group_by(item1) %>% 
+  top_n (10,correlation) %>% 
+  mutate(item2= fct_reorder(item2,correlation)) %>% 
+  ggplot(aes(correlation,item2)) +
+  geom_col() +
+  facet_wrap(~item1, scales = "free_y") +
+  labs(title ="What ingredients are more correlated with gin?")
+
+
+```
+
+```{r}
+
+
+library(tidytext)
+
+ingredient_paris %>% 
+  filter (item1 %in% c("Gin","Tequila")) %>% 
+  group_by(item1) %>% 
+  top_n (10,correlation) %>% 
+  mutate(item2= reorder_within(item2,correlation,item1)) %>% 
+  ggplot(aes(correlation,item2)) +
+  geom_col() +
+  facet_wrap(~item1, scales = "free_y") +
+  labs(title ="What ingredients are more correlated with gin and Tequila?")
+
+```
+```{r}
+
+
+ingredient_paris %>% 
+  filter (item1 %in% c("Gin","Tequila")) %>% 
+  group_by(item1) %>% 
+  top_n (10,correlation) %>% 
+  mutate(item2= reorder_within(item2,correlation,item1)) %>% 
+  ggplot(aes(correlation,item2)) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~item1, scales = "free_y") +
+  labs(title ="What ingredients are more correlated with gin and Tequila?")
+
+
+```
+
+```{r}
+ingredient_paris %>% 
+  filter (item1 %in% c("Gin","Tequila", "Triple Sec", "Dry Vermouth", "Vodka", "Bourbon")) %>% 
+  group_by(item1) %>% 
+  top_n (10,correlation) %>% 
+  mutate(item2= reorder_within(item2,correlation,item1)) %>% 
+  ggplot(aes(correlation,item2)) +
+  geom_col() +
+  scale_y_reordered() +
+  facet_wrap(~item1, scales = "free_y") +
+  labs(title ="Ingredients correlation")
 ```
 
