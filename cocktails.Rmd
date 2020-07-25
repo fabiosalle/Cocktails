@@ -115,12 +115,59 @@ mr_boston %>%
 
 What ingredients tend to appear together?
 
+### Primary vs Secondary Ingredients
+
+```{r}
+mr_boston %>% 
+  group_by(ingredient) %>% 
+  summarize(n=n(),
+            avg_position = mean(ingredient_number)) %>% 
+  arrange(desc(n))
+
+```
+
+```{r}
+
+mr_boston %>% 
+  count(measure,sort=TRUE) %>% 
+  View()
+
+#Data cleaning turn thi sinto number
+
+mr_boston_parsed <-  mr_boston%>% 
+  extract(measure,"amount",regex = "(.*) oz", remove = FALSE) %>% 
+  extract(amount,"ones",regex = "(^\\d+$|^\\D+ )", convert = TRUE, remove = FALSE) %>% 
+  extract(amount,c("numerator", "denominator"),
+          regex = "(^\\d+)\\/(\\d+)", convert = TRUE, remove = FALSE) %>% 
+  replace_na(list(ones=0,numerator=0,denominator = 1)) %>% 
+  mutate(oz = ones + numerator / denominator)
+
+  
+ingredient_summarized <- mr_boston_parsed  %>% 
+  group_by(name) %>% 
+  mutate(percentile = row_number()/n()) %>% 
+  group_by(ingredient) %>% 
+  summarize(n=n(),
+            avg_position = mean(percentile),
+            avg_serving = mean(oz, na.rm=TRUE)) %>% 
+  arrange(desc(n))
+
+
+```
+
+```{r}
+ingredient_summarized 
+```
+
+
+## Clustering 
+
 ```{r}
 library(widyr)
 
 ingredient_paris <- mr_boston %>% 
   add_count(ingredient) %>% 
-  filter (n >=5) %>% 
+  filter (n >=10) %>% 
   pairwise_cor(ingredient,name,sort=TRUE)
 
 
@@ -200,5 +247,30 @@ ingredient_paris %>%
   scale_y_reordered() +
   facet_wrap(~item1, scales = "free_y") +
   labs(title ="Ingredients correlation")
+```
+
+
+```{r}
+
+library(ggraph)
+library(igraph)
+
+ingredient_paris %>% 
+  head(150) %>%  #number of connections
+  graph_from_data_frame() %>% 
+  ggraph(layout="fr")+
+  geom_edge_link()+
+  geom_node_text(aes(label=name),repel=TRUE) +
+  geom_node_point()
+  
+
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```
 
